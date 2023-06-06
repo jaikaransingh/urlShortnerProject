@@ -39,7 +39,7 @@ const urlShortner = async function (req, res) {
 
     if (cacheUrl) {
       const cacheData = JSON.parse(cacheUrl);
-      return res.status(200).send({ status: true, data: {longUrl:cacheData.longUrl, shortUrl:cacheData.shortUrl, urlCode:cacheData.urlCode}});
+      return res.status(201).send({ status: true, data: {longUrl:cacheData.longUrl, shortUrl:cacheData.shortUrl, urlCode:cacheData.urlCode}});
     }
 
     // Check if the URL already exists in the database
@@ -49,7 +49,7 @@ const urlShortner = async function (req, res) {
       // Cache the URL for 24 hours
       await SET_ASYNC(longUrl, JSON.stringify(urlData), 'EX', 24 * 60 * 60);
 
-      return res.status(200).send({ status: true, data: {longUrl:urlData.longUrl, shortUrl:urlData.shortUrl, urlCode:urlData.urlCode}});
+      return res.status(201).send({ status: true, data: {longUrl:urlData.longUrl, shortUrl:urlData.shortUrl, urlCode:urlData.urlCode}});
     }
 
     const baseUrl = process.env.BASE_URL // Replace with your application's base URL
