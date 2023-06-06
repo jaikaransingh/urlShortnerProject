@@ -26,16 +26,31 @@ const GET_ASYNC = promisify(redisClient.GET).bind(redisClient);
 const urlShortner = async function (req, res) {
   try {
     let { longUrl } = req.body;
-    
+
+    if(Object.keys(req.body).length == 0) {
+      return res.status(400).send({status : false , message : "pls enter url"})
+    }
+
     if (!longUrl) {
       return res.status(400).send({ status: false, message: "Request body must contain longUrl" });
     }
+    
+    if (!isValid(longUrl)) {
+      return res.status(400).send({ status: false, message: "longUrl must be a Valid URL" });
+    }
+
+    longUrl = longUrl.trim();
 
     if (!validUrl.isWebUri(longUrl)) {
       return res.status(400).send({ status: false, message: "longUrl must be a Valid URL" });
     }
+
+    if(!validator.isURL(longUrl)){
+      return res.status(400).send({ status: false, message: "Url Domain not Allowed" });
+    }
+
     // Check if the URL already exists in the cache
-    let cacheUrl = await GET_ASYNC(longUrl);
+    let cacheUrl = await GET_ASYNC(`${longUrl}`);
 
     if (cacheUrl) {
       const cacheData = JSON.parse(cacheUrl);
@@ -47,7 +62,7 @@ const urlShortner = async function (req, res) {
 
     if (urlData) {
       // Cache the URL for 24 hours
-      await SET_ASYNC(longUrl, JSON.stringify(urlData), 'EX', 24 * 60 * 60);
+      await SET_ASYNC(`${longUrl}`, JSON.stringify(urlData), 'EX', 24 * 60 * 60);
 
       return res.status(201).send({ status: true, data: {longUrl:urlData.longUrl, shortUrl:urlData.shortUrl, urlCode:urlData.urlCode}});
     }
@@ -70,7 +85,7 @@ const urlShortner = async function (req, res) {
   }
 
     // Cache the URL for 24 hours
-    await SET_ASYNC(longUrl, JSON.stringify({longUrl,shortUrl,urlCode}), 'EX', 24 * 60 * 60);
+    await SET_ASYNC(`${longUrl}`, JSON.stringify({longUrl,shortUrl,urlCode}), 'EX', 24 * 60 * 60);
 
     res.status(201).send({ status: true, data: urlResponse });
   } 
@@ -83,11 +98,18 @@ const urlShortner = async function (req, res) {
 const getUrl = async function (req, res) {
   try {
 
-    let { urlCode } = req.params;    
+    let { urlCode } = req.params;
+
+    if (!urlCode) {
+      return res.status(400).send({ status: false, message: "urlCode is required" });
+    }
+
+    urlCode = urlCode.trim().toLowerCase();
+    
     // URL convert using the trimmed and lowercase URL code
     
     // Check if the URL exists in the cache
-    let cachedUrl = await GET_ASYNC(urlCode);
+    let cachedUrl = await GET_ASYNC(`${urlCode}`);
 
     if (cachedUrl) {
       const { longUrl } = JSON.parse(cachedUrl);
@@ -99,7 +121,7 @@ const getUrl = async function (req, res) {
 
     if (urlData) {
       // Cache the URL for 24 hours
-      await SET_ASYNC(urlCode, JSON.stringify({ longUrl: urlData.longUrl }), 'EX', 24 * 60 * 60);
+      await SET_ASYNC(`${urlCode}`, JSON.stringify({ longUrl: urlData.longUrl }), 'EX', 24 * 60 * 60);
       // Redirect to the original URL
       return res.status(302).redirect(urlData.longUrl);
     } 
